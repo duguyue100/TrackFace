@@ -13,8 +13,8 @@ TrackFace::TrackFace(QWidget *parent) :
     fn_features=fn_path+"resources/features.in";
     fn_namedb=fn_path+"resources/namedb.in";
 
-    im_width=150;
-    im_height=150;
+    im_width=250;
+    im_height=250;
 
     window_x=300;
     window_y=300;
@@ -93,8 +93,7 @@ void TrackFace::on_grabPhoto_clicked()
     cout << name << endl;
 
     string namepath=iofunctions.addName(name, fn_namedb, fn_path);
-    int counter=1;
-    int frames=100;
+    int frames=1;
 
     int label=0;
     if (!labels.empty()) label=labels[labels.size()-1]+1;
@@ -120,7 +119,8 @@ void TrackFace::on_grabPhoto_clicked()
         {
         case GRABBING_OFF:
         {
-            putText(frame, "Click anywhere to grab your face", Point(frame.cols/2-250, 100), FONT_HERSHEY_PLAIN, 1.2, CV_RGB(255,0,0),2.0);
+            string text=format("Grabbing your face No. %d", frames);
+            putText(frame, text, Point(frame.cols/2-250, 100), FONT_HERSHEY_PLAIN, 1.2, CV_RGB(255,0,0),2.0);
             cv::imshow(windowName.c_str(), frame);
             break;
         }
@@ -134,19 +134,18 @@ void TrackFace::on_grabPhoto_clicked()
 
                 Mat resizedFace=resizeFace(frame(faces[n]), im_width, im_height);
 
-                while (counter/frames<=20)
-                {
-                    if (counter%frames==0)
-                    {
-                        string imgPath=namepath+name+"_"+(char)(counter/frames+'A'-1)+".jpg";
-                        cv::imwrite(imgPath,resizedFace);
-                        iofunctions.addToTrain(fn_images,"resources/"+name+"/"+name+"_"+(char)(counter/frames+'A'-1)+".jpg", label);
-                    }
-                    counter++;
-                    putText(frame, "Grabbing your face", Point(frame.cols/2-250, 100), FONT_HERSHEY_PLAIN, 1.2, CV_RGB(255,0,0),2.0);
-                }
+                string imgPath=namepath+name+"_"+(char)(frames+'A'-1)+".jpg";
+                cv::imwrite(imgPath,resizedFace);
+                iofunctions.addToTrain(fn_images,"resources/"+name+"/"+name+"_"+(char)(frames+'A'-1)+".jpg", label);
 
-                putText(frame, "Grabbing finished, click right button to close", Point(frame.cols/2-250, 100), FONT_HERSHEY_PLAIN, 1.2, CV_RGB(255,0,0),2.0);
+                frames++;
+
+                if (frames>20)
+                {
+                    grab_state=GRABBING_CLOSE;
+                }
+                else grab_state=GRABBING_OFF;
+
                 drawFace(frame, faces[n], name);
             }
 
@@ -207,12 +206,17 @@ void TrackFace::on_recognition_clicked()
 
             int prediction=model->predict(face_resized);
 
-            int label=0;
             double confidence=0.0;
-            model->predict(face_resized, label, confidence);
+            model->predict(face_resized, prediction, confidence);
+
             cout << confidence << endl;
 
-            string box_text=format("Prediction is %s", names[prediction].c_str());
+            string box_text="";
+            if (confidence<=2400)
+                box_text="Prediction is family";
+            else box_text="Prediction is stranger";
+
+            //string box_text=format("Prediction is %s", names[prediction].c_str());
 
             drawFace(frame, faces[i], box_text);
         }

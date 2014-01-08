@@ -8,6 +8,7 @@
 #include<cstdlib>
 #include<cstdio>
 #include<ctime>
+#include<cfloat>
 #include<string>
 
 // OpenCV Libraries
